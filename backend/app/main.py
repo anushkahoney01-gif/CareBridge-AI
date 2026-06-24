@@ -1,23 +1,40 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+from app.config import settings
+from app.database import Base, engine
 
-app = FastAPI(title="AI Healthcare Platform API", version="1.0.0")
+# Import routers (we will create these next)
+from app.routers import doctor, patient
 
-# Enable CORS so your frontend fetch() requests don't get blocked
+# Automatically create the database tables if they don't exist yet
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title=settings.APP_NAME, version="1.0.0")
+
+# Setup CORS policies so frontend Fetch API requests function across origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production for security
+    allow_origins=["*"],  # Adjust this to specific URLs in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# API Route Stub Examples
+# Register modular route endpoints
+app.include_router(doctor.router, prefix="/api", tags=["Doctor Operations"])
+app.include_router(patient.router, prefix="/api", tags=["Patient Operations"])
+
+# Serve frontend static assets (HTML, CSS, JS)
+app.mount("/frontend", StaticFiles(directory="../frontend"), name="frontend")
+
+# Automatically redirect the root URL to the Doctor Portal UI
+@app.get("/")
+def read_root():
+    return RedirectResponse(url="/frontend/doctor.html")
+
+# Shared backend health check endpoint
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "database": "connected"}
-
-# Mount the frontend directory so FastAPI can serve your HTML/CSS/JS directly
-# In production, visiting your server URL /frontend/doctor.html will render the UI
-app.mount("/frontend", StaticFiles(directory="../frontend"), name="frontend")
+    return {"status": "healthy", "app": settings.APP_NAME}
