@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareBridge AI — Patient Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2a3a; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #065f46, #059669);
+      color: #fff; padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header-nav a { color: #fff; text-decoration: none; margin-left: 20px; font-size: .9rem; opacity: .85; }
+    .header-nav a:hover { opacity: 1; }
+
+    /* Login Panel */
+    #loginPanel {
+      max-width: 420px; margin: 80px auto; padding: 0 20px;
+    }
+    .login-card {
+      background: #fff; border-radius: 16px; padding: 36px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.12); text-align: center;
+    }
+    .login-card .logo { font-size: 3rem; margin-bottom: 12px; }
+    .login-card h2 { font-size: 1.3rem; color: #065f46; margin-bottom: 8px; }
+    .login-card p { font-size: .9rem; color: #64748b; margin-bottom: 24px; }
+
+    /* Main Dashboard */
+    #dashboard { display: none; }
+    main { max-width: 1100px; margin: 28px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .full-width { grid-column: 1 / -1; }
+
+    /* Profile Header */
+    .profile-header {
+      background: linear-gradient(135deg, #065f46, #059669);
+      color: #fff; border-radius: 16px; padding: 28px 32px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .profile-info h2 { font-size: 1.5rem; font-weight: 700; }
+    .profile-info p  { font-size: .95rem; opacity: .85; margin-top: 4px; }
+    .adherence-badge {
+      text-align: center; background: rgba(255,255,255,.15);
+      border-radius: 12px; padding: 16px 24px; min-width: 120px;
+    }
+    .adherence-badge .score { font-size: 2.2rem; font-weight: 800; }
+    .adherence-badge .label { font-size: .78rem; opacity: .85; margin-top: 2px; }
+    .adherence-bar-wrap { background: rgba(255,255,255,.2); border-radius: 999px; height: 6px; margin-top: 8px; overflow: hidden; width: 100px; }
+    .adherence-bar { background: #fff; height: 100%; border-radius: 999px; transition: width .6s ease; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 12px; padding: 22px; box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+    .card h2 { font-size: 1rem; font-weight: 700; color: #065f46; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #d1fae5; }
+
+    /* Forms */
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+    input[type="number"], input[type="text"], input[type="datetime-local"], select, textarea {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #d1dbe8; border-radius: 8px;
+      font-size: .95rem; color: #1a2a3a; background: #f8fafc; outline: none; transition: border-color .2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #059669; background: #fff; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: transform .1s, box-shadow .2s; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: #059669; color: #fff; }
+    .btn-blue    { background: #2563a8; color: #fff; }
+    .btn-outline { background: transparent; color: #059669; border: 1.5px solid #059669; }
+    .btn-sm      { padding: 7px 14px; font-size: .82rem; }
+    .btn-block   { width: 100%; justify-content: center; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Medication Checklist */
+    .med-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px; border-radius: 8px; margin-bottom: 8px;
+      background: #f8fafc; border: 1.5px solid #e2e8f0;
+      transition: background .2s, border-color .2s;
+    }
+    .med-item.done { background: #f0fdf4; border-color: #86efac; }
+    .med-item input[type="checkbox"] {
+      width: 20px; height: 20px; accent-color: #059669; cursor: pointer; flex-shrink: 0; margin-top: 2px;
+    }
+    .med-item .med-info { flex: 1; }
+    .med-item .med-name { font-weight: 700; font-size: .95rem; color: #1a2a3a; }
+    .med-item.done .med-name { text-decoration: line-through; color: #64748b; }
+    .med-item .med-dose { font-size: .82rem; color: #059669; font-weight: 600; margin-top: 2px; }
+    .med-item .med-inst { font-size: .82rem; color: #64748b; margin-top: 2px; }
+    .empty-msg { color: #94a3b8; font-size: .88rem; font-style: italic; }
+
+    /* Reminders */
+    .reminder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .reminder-tile {
+      border-radius: 10px; padding: 14px; text-align: center; cursor: pointer;
+      border: 2px solid transparent; transition: transform .15s, border-color .2s;
+    }
+    .reminder-tile:hover { transform: translateY(-2px); }
+    .reminder-tile.pending  { background: #fef3c7; border-color: #fbbf24; }
+    .reminder-tile.done     { background: #d1fae5; border-color: #34d399; }
+    .reminder-tile.missed   { background: #fee2e2; border-color: #f87171; }
+    .reminder-tile .r-icon  { font-size: 1.8rem; margin-bottom: 6px; }
+    .reminder-tile .r-type  { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #374151; }
+    .reminder-tile .r-msg   { font-size: .78rem; color: #4b5563; margin-top: 3px; }
+    .reminder-tile .r-time  { font-size: .72rem; color: #6b7280; margin-top: 4px; }
+    .r-status-badge { font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 20px; display: inline-block; margin-top: 5px; }
+    .r-status-badge.pending  { background: #fbbf24; color: #78350f; }
+    .r-status-badge.completed { background: #34d399; color: #065f46; }
+    .r-status-badge.missed   { background: #f87171; color: #7f1d1d; }
+
+    /* Add Reminder Form */
+    .add-reminder-form { background: #f8fafc; border-radius: 10px; padding: 16px; margin-top: 16px; border: 1.5px solid #e2e8f0; }
+    .add-reminder-form h3 { font-size: .9rem; font-weight: 700; color: #374151; margin-bottom: 12px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Progress Trackers */
+    .tracker-item { margin-bottom: 14px; }
+    .tracker-label { display: flex; justify-content: space-between; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .progress-bar { background: #e2e8f0; border-radius: 999px; height: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 999px; transition: width .5s ease; }
+    .fill-water    { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
+    .fill-exercise { background: linear-gradient(90deg, #fb923c, #f97316); }
+    .fill-meds     { background: linear-gradient(90deg, #34d399, #10b981); }
+    .tracker-controls { display: flex; gap: 8px; margin-top: 8px; }
+    .tracker-btn { padding: 5px 14px; border-radius: 6px; border: none; font-size: .82rem; font-weight: 600; cursor: pointer; }
+    .tracker-btn.plus  { background: #dbeafe; color: #1e40af; }
+    .tracker-btn.minus { background: #fee2e2; color: #991b1b; }
+
+    /* Appointments */
+    .appt-card { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .appt-card:last-child { margin-bottom: 0; }
+    .appt-card .appt-date { font-weight: 700; font-size: .95rem; color: #065f46; }
+    .appt-card .appt-status-pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin-left: 8px; background: #d1fae5; color: #065f46; }
+
+    /* Status bars */
+    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: .88rem; font-weight: 500; margin-top: 10px; display: none; }
+    .status-bar.info    { background: #dbeafe; color: #1e40af; display: block; }
+    .status-bar.success { background: #dcfce7; color: #166534; display: block; }
+    .status-bar.error   { background: #fee2e2; color: #991b1b; display: block; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; }
+      .reminder-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F9E1; CareBridge AI &mdash; Patient Portal</h1>
+  <nav class="header-nav">
+    <a href="doctor.html">&larr; Doctor Portal</a>
+  </nav>
+</header>
+
+<!-- Login Panel -->
+<div id="loginPanel">
+  <div class="login-card">
+    <div class="logo">&#x1F9E1;</div>
+    <h2>Patient Dashboard</h2>
+    <p>Enter your Patient ID to access your health dashboard</p>
+    <div class="form-group">
+      <input type="number" id="loginPatientId" placeholder="Your Patient ID (e.g. 1)" min="1" style="text-align:center;font-size:1.1rem;" />
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="loadDashboard()">
+      &#x1F511; Access My Dashboard
+    </button>
+    <div id="loginStatus" class="status-bar"></div>
+  </div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard">
+  <main>
+
+    <!-- Profile Header -->
+    <div class="card full-width" style="padding:0;overflow:hidden;background:transparent;box-shadow:none;">
+      <div class="profile-header">
+        <div class="profile-info">
+          <h2 id="profileName">Loading...</h2>
+          <p id="profileAge"></p>
+          <div style="margin-top:12px;">
+            <select id="langSelector" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);color:#fff;padding:6px 12px;border-radius:8px;font-size:.88rem;cursor:pointer;" onchange="translateMedications()">
+              <option value="">&#x1F310; Language: English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="Hindi">Hindi</option>
+              <option value="French">French</option>
+              <option value="Arabic">Arabic</option>
+              <option value="Portuguese">Portuguese</option>
+              <option value="Bengali">Bengali</option>
+              <option value="Telugu">Telugu</option>
+              <option value="Tamil">Tamil</option>
+            </select>
+          </div>
+        </div>
+        <div class="adherence-badge">
+          <div class="score" id="adherenceScore">--%</div>
+          <div class="label">Adherence Score</div>
+          <div class="adherence-bar-wrap">
+            <div class="adherence-bar" id="adherenceBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medications Checklist -->
+    <div class="card">
+      <h2>&#x1F48A; My Medications</h2>
+      <div id="medList"><p class="empty-msg">Loading medications...</p></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="refreshAdherence()">
+        &#x1F504; Refresh Adherence Score
+      </button>
+    </div>
+
+    <!-- Daily Trackers -->
+    <div class="card">
+      <h2>&#x1F4CA; Daily Health Trackers</h2>
+
+      <div class="tracker-item">
+        <div class="tracker-label">
+          <span>&#x1F4A7; Water Intake</span>
+          <span id="waterLabel">0 / 8 glasses</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill fill-water" id="waterBar" style="width:0%"></div></div>
+        <div class="tracker-controls">
+          <button class="tracker-btn plus"  onclick="adjustTracker('water', 1)">+ Glass</button>
+          <button class="tracker-btn minus" onclick="adjustTracker('water', -1)">- Glass</button>
+        </div>
+      </div>
+
+      <div class="tracker-item">
+        <div class="tracker-label">
+          <span>&#x1F3C3; Exercise</span>
+          <span id="exerciseLabel">0 / 30 minutes</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill fill-exercise" id="exerciseBar" style="width:0%"></div></div>
+        <div class="tracker-controls">
+          <button class="tracker-btn plus"  onclick="adjustTracker('exercise', 5)">+ 5 min</button>
+          <button class="tracker-btn minus" onclick="adjustTracker('exercise', -5)">- 5 min</button>
+        </div>
+      </div>
+
+      <div class="tracker-item" style="margin-bottom:0;">
+        <div class="tracker-label">
+          <span>&#x1F48A; Meds Taken Today</span>
+          <span id="medsTakenLabel">0 / 0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill fill-meds" id="medsTakenBar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Reminders -->
+    <div class="card full-width">
+      <h2>&#x23F0; My Reminders</h2>
+      <div class="reminder-grid" id="reminderGrid">
+        <p class="empty-msg">Loading reminders...</p>
+      </div>
+
+      <!-- Add Reminder -->
+      <div class="add-reminder-form">
+        <h3>+ Add New Reminder</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reminderType">Type</label>
+            <select id="reminderType">
+              <option value="Medication">&#x1F48A; Medication</option>
+              <option value="Water">&#x1F4A7; Water</option>
+              <option value="Exercise">&#x1F3C3; Exercise</option>
+              <option value="Follow-up">&#x1F4C5; Follow-up</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reminderTime">Scheduled Time</label>
+            <input type="datetime-local" id="reminderTime" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="reminderMsg">Alert Message</label>
+          <input type="text" id="reminderMsg" placeholder="e.g. Take 500mg Acetaminophen with water" />
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addReminder()">&#x2795; Add Reminder</button>
+        <div id="reminderStatus" class="status-bar"></div>
+      </div>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="card">
+      <h2>&#x1F4C5; Upcoming Appointments</h2>
+      <div id="appointmentsList"><p class="empty-msg">Loading appointments...</p></div>
+    </div>
+
+    <!-- Active Medications (Translation View) -->
+    <div class="card">
+      <h2>&#x1F4DC; Prescription Summary</h2>
+      <div id="prescriptionSummary"><p class="empty-msg">Loading prescriptions...</p></div>
+      <div id="translationStatus" class="status-bar"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const API = window.location.origin;
+  let patientId = null;
+  let allMedications = [];
+  let trackers = { water: 0, exercise: 0 };
+  let medsDone = 0;
+  let medsTotal = 0;
+
+  async function loadDashboard() {
+    const pid = document.getElementById('loginPatientId').value.trim();
+    const status = document.getElementById('loginStatus');
+    if (!pid) { showStatus(status, 'error', 'Please enter your Patient ID.'); return; }
+
+    showStatus(status, 'info', 'Loading your dashboard...');
+
+    try {
+      const res  = await fetch(`${API}/api/patient/${pid}`);
+      const data = await res.json();
+
+      if (!res.ok) { showStatus(status, 'error', data.detail || 'Patient not found.'); return; }
+
+      patientId = pid;
+
+      // Show dashboard
+      document.getElementById('loginPanel').style.display = 'none';
+      document.getElementById('dashboard').style.display  = 'block';
+
+      // Populate profile
+      const info = data.patient_info || {};
+      document.getElementById('profileName').textContent = info.name || 'Patient';
+      document.getElementById('profileAge').textContent  = `Age: ${info.age || '--'} years`;
+
+      // Populate medications
+      allMedications = data.active_medications || [];
+      medsTotal      = allMedications.length;
+      renderMedications(allMedications);
+      updateMedsTracker();
+
+      // Populate appointments
+      renderAppointments(data.upcoming_appointments || []);
+
+      // Render prescription summary
+      renderPrescriptionSummary(allMedications);
+
+      // Load adherence
+      await refreshAdherence();
+
+      // Load reminders
+      await loadReminders();
+
+    } catch (err) {
+      showStatus(status, 'error', 'Network error: ' + err.message);
+    }
+  }
+
+  function renderMedications(meds) {
+    const el = document.getElementById('medList');
+    if (!meds || meds.length === 0) {
+      el.innerHTML = '<p class="empty-msg">No active medications found.</p>';
+      return;
+    }
+    el.innerHTML = meds.map((m, i) => `
+      <div class="med-item" id="medItem${i}">
+        <input type="checkbox" id="medCheck${i}" onchange="toggleMed(${i})" />
+        <div class="med-info">
+          <div class="med-name">${m.drug_name}</div>
+          <div class="med-dose">${m.dosage}</div>
+          <div class="med-inst">${m.instructions || ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function toggleMed(i) {
+    const item = document.getElementById(`medItem${i}`);
+    const chk  = document.getElementById(`medCheck${i}`);
+    if (chk.checked) {
+      item.classList.add('done');
+      medsDone++;
+    } else {
+      item.classList.remove('done');
+      medsDone = Math.max(0, medsDone - 1);
+    }
+    updateMedsTracker();
+  }
+
+  function updateMedsTracker() {
+    const pct = medsTotal > 0 ? Math.round((medsDone / medsTotal) * 100) : 0;
+    document.getElementById('medsTakenLabel').textContent = `${medsDone} / ${medsTotal}`;
+    document.getElementById('medsTakenBar').style.width   = `${pct}%`;
+  }
+
+  function renderAppointments(appts) {
+    const el = document.getElementById('appointmentsList');
+    if (!appts || appts.length === 0) {
+      el.innerHTML = '<p class="empty-msg">No upcoming appointments.</p>';
+      return;
+    }
+    el.innerHTML = appts.map(a => `
+      <div class="appt-card">
+        <div class="appt-date">
+          ${new Date(a.appointment_date).toLocaleString()}
+          <span class="appt-status-pill">${a.status || 'Scheduled'}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderPrescriptionSummary(meds) {
+    const el = document.getElementById('prescriptionSummary');
+    if (!meds || meds.length === 0) {
+      el.innerHTML = '<p class="empty-msg">No prescriptions found.</p>';
+      return;
+    }
+    el.innerHTML = meds.map(m => `
+      <div style="padding:10px 0;border-bottom:1px solid #d1fae5;">
+        <strong>${m.drug_name}</strong> &mdash; ${m.dosage}<br />
+        <span style="font-size:.85rem;color:#4b5563;">${m.instructions || ''}</span>
+      </div>`).join('');
+  }
+
+  async function refreshAdherence() {
+    if (!patientId) return;
+    try {
+      const res  = await fetch(`${API}/api/adherence/${patientId}`);
+      const data = await res.json();
+      if (res.ok) {
+        const score = data.adherence_score ?? 0;
+        document.getElementById('adherenceScore').textContent = `${score.toFixed(0)}%`;
+        document.getElementById('adherenceBar').style.width   = `${score}%`;
+      }
+    } catch {}
+  }
+
+  async function loadReminders() {
+    if (!patientId) return;
+    try {
+      const res  = await fetch(`${API}/api/reminders/${patientId}`);
+      const data = await res.json();
+      if (res.ok) renderReminders(Array.isArray(data) ? data : []);
+    } catch {}
+  }
+
+  function renderReminders(reminders) {
+    const grid = document.getElementById('reminderGrid');
+    if (!reminders || reminders.length === 0) {
+      grid.innerHTML = '<p class="empty-msg">No reminders yet. Add one below.</p>';
+      return;
+    }
+    const icons = { Medication: '&#x1F48A;', Water: '&#x1F4A7;', Exercise: '&#x1F3C3;', 'Follow-up': '&#x1F4C5;' };
+    grid.innerHTML = reminders.map(r => `
+      <div class="reminder-tile ${(r.status || 'pending').toLowerCase()}" onclick="markReminder(${r.id}, '${r.status}')">
+        <div class="r-icon">${icons[r.reminder_type] || '&#x23F0;'}</div>
+        <div class="r-type">${r.reminder_type}</div>
+        <div class="r-msg">${r.alert_message}</div>
+        <div class="r-time">${new Date(r.scheduled_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+        <span class="r-status-badge ${(r.status || 'pending').toLowerCase()}">${r.status || 'Pending'}</span>
+      </div>`).join('');
+  }
+
+  async function markReminder(id, currentStatus) {
+    if (currentStatus === 'Completed') return;
+    try {
+      await fetch(`${API}/api/reminders/${id}/complete`, { method: 'PATCH' });
+      await loadReminders();
+      await refreshAdherence();
+    } catch {}
+  }
+
+  async function addReminder() {
+    const type    = document.getElementById('reminderType').value;
+    const msg     = document.getElementById('reminderMsg').value.trim();
+    const time    = document.getElementById('reminderTime').value;
+    const status  = document.getElementById('reminderStatus');
+
+    if (!msg)  { showStatus(status, 'error', 'Please enter an alert message.'); return; }
+    if (!time) { showStatus(status, 'error', 'Please select a scheduled time.'); return; }
+
+    showStatus(status, 'info', 'Adding reminder...');
+
+    try {
+      const res = await fetch(`${API}/api/reminders`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id:     parseInt(patientId),
+          reminder_type:  type,
+          alert_message:  msg,
+          scheduled_time: new Date(time).toISOString()
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showStatus(status, 'success', `Reminder added (ID: ${data.reminder_id})`);
+        document.getElementById('reminderMsg').value  = '';
+        document.getElementById('reminderTime').value = '';
+        await loadReminders();
+      } else {
+        showStatus(status, 'error', data.detail || 'Failed to add reminder.');
+      }
+    } catch (err) {
+      showStatus(status, 'error', 'Network error adding reminder.');
+    }
+  }
+
+  function adjustTracker(type, delta) {
+    if (type === 'water') {
+      trackers.water = Math.max(0, Math.min(8, trackers.water + delta));
+      const pct = Math.round((trackers.water / 8) * 100);
+      document.getElementById('waterLabel').textContent = `${trackers.water} / 8 glasses`;
+      document.getElementById('waterBar').style.width   = `${pct}%`;
+    } else if (type === 'exercise') {
+      trackers.exercise = Math.max(0, Math.min(60, trackers.exercise + delta));
+      const pct = Math.round((trackers.exercise / 30) * 100);
+      document.getElementById('exerciseLabel').textContent = `${trackers.exercise} / 30 minutes`;
+      document.getElementById('exerciseBar').style.width   = `${Math.min(100, pct)}%`;
+    }
+  }
+
+  async function translateMedications() {
+    const lang   = document.getElementById('langSelector').value;
+    const status = document.getElementById('translationStatus');
+    if (!lang || allMedications.length === 0) {
+      if (!lang) renderPrescriptionSummary(allMedications);
+      return;
+    }
+
+    showStatus(status, 'info', `Translating to ${lang}...`);
+
+    try {
+      const summaryEl = document.getElementById('prescriptionSummary');
+      summaryEl.innerHTML = '<p class="empty-msg">Translating...</p>';
+
+      const translated = await Promise.all(allMedications.map(async m => {
+        const text = `${m.drug_name} ${m.dosage} — ${m.instructions || ''}`;
+        const res  = await fetch(`${API}/api/translate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, target_language: lang })
+        });
+        const data = await res.json();
+        return { ...m, instructions: data.translated_text || m.instructions };
+      }));
+
+      renderPrescriptionSummary(translated);
+      showStatus(status, 'success', `Translated to ${lang}.`);
+    } catch (err) {
+      showStatus(status, 'error', 'Translation failed.');
+      renderPrescriptionSummary(allMedications);
+    }
+  }
+
+  function showStatus(el, type, msg) {
+    el.className   = `status-bar ${type}`;
+    el.textContent = msg;
+  }
+</script>
+</body>
+</html>

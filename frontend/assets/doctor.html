@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareBridge AI — Doctor Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2a3a; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff; padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header-nav a { color: #fff; text-decoration: none; margin-left: 20px; font-size: .9rem; opacity: .85; }
+    .header-nav a:hover { opacity: 1; }
+
+    main { max-width: 1100px; margin: 32px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .full-width { grid-column: 1 / -1; }
+
+    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+    .card h2 { font-size: 1rem; font-weight: 700; color: #1a3a5c; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f0fe; }
+
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: .82rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+    input[type="text"], input[type="number"], input[type="datetime-local"], select, textarea {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #d1dbe8; border-radius: 8px;
+      font-size: .95rem; color: #1a2a3a; background: #f8fafc; outline: none; transition: border-color .2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #2563a8; background: #fff; }
+    textarea { resize: vertical; min-height: 100px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: transform .1s, box-shadow .2s; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: #2563a8; color: #fff; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-outline { background: transparent; color: #2563a8; border: 1.5px solid #2563a8; }
+    .btn-sm { padding: 7px 14px; font-size: .82rem; }
+    .btn-block { width: 100%; justify-content: center; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+    .upload-zone {
+      border: 2px dashed #94afd0; border-radius: 10px; padding: 28px;
+      text-align: center; cursor: pointer; background: #f0f6ff; transition: border-color .2s, background .2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover { border-color: #2563a8; background: #e8f0fe; }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-zone .upload-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .upload-zone p { color: #4a6080; font-size: .9rem; }
+    .upload-zone .file-name { margin-top: 8px; font-weight: 600; color: #2563a8; font-size: .88rem; }
+
+    .output-box { background: #f8fafc; border: 1.5px solid #d1dbe8; border-radius: 8px; padding: 14px; min-height: 80px; font-size: .9rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #2d3748; }
+    .output-box.soap { font-family: 'Courier New', monospace; font-size: .85rem; }
+    .output-box.empty { color: #94a3b8; font-style: italic; }
+
+    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: .88rem; font-weight: 500; margin-top: 12px; display: none; }
+    .status-bar.info    { background: #dbeafe; color: #1e40af; display: block; }
+    .status-bar.success { background: #dcfce7; color: #166534; display: block; }
+    .status-bar.error   { background: #fee2e2; color: #991b1b; display: block; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 28px; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .78rem; font-weight: 600; }
+    .tag-complaint   { background: #fee2e2; color: #9b1c1c; }
+    .tag-med         { background: #d1fae5; color: #065f46; }
+    .tag-instruction { background: #fef3c7; color: #78350f; }
+    .tag-advice      { background: #ede9fe; color: #4c1d95; }
+
+    .appt-list { list-style: none; }
+    .appt-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e8f0fe; font-size: .9rem; }
+    .appt-list li:last-child { border-bottom: none; }
+    .appt-status { font-size: .75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .appt-status.scheduled { background: #dbeafe; color: #1e40af; }
+    .appt-status.completed { background: #dcfce7; color: #166534; }
+    .appt-status.cancelled { background: #fee2e2; color: #991b1b; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F3E5; CareBridge AI &mdash; Doctor Portal</h1>
+  <nav class="header-nav">
+    <a href="patient.html">Patient Portal &rarr;</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- Patient Registration -->
+  <div class="card">
+    <h2>&#x1F464; Patient Registration</h2>
+    <div class="form-group">
+      <label for="patientName">Patient Full Name</label>
+      <input type="text" id="patientName" placeholder="e.g. Anusha Sharma" />
+    </div>
+    <div class="form-group">
+      <label for="patientAge">Patient Age (years)</label>
+      <input type="number" id="patientAge" placeholder="e.g. 28" min="0" max="120" />
+    </div>
+    <div class="form-group">
+      <label for="appointmentDate">Appointment Date &amp; Time</label>
+      <input type="datetime-local" id="appointmentDate" />
+    </div>
+    <div id="registerStatus" class="status-bar"></div>
+  </div>
+
+  <!-- Audio Transcription -->
+  <div class="card">
+    <h2>&#x1F3A4; Audio Transcription</h2>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('audioPicker').click()">
+      <input type="file" id="audioPicker" accept="audio/*,.mp3,.wav,.m4a" />
+      <div class="upload-icon">&#x1F4C2;</div>
+      <p>Click to select audio file<br /><small>Supports .mp3, .wav, .m4a</small></p>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="transcribeBtn" onclick="uploadAudioFile()" disabled>
+        &#x25B6; Transcribe Audio
+      </button>
+    </div>
+    <div id="transcribeStatus" class="status-bar"></div>
+  </div>
+
+  <!-- Transcript Output -->
+  <div class="card full-width">
+    <h2>&#x1F4DD; Raw Transcript</h2>
+    <div class="output-box empty" id="transcriptDisplay">Transcript will appear here after processing the audio file...</div>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" onclick="generateSOAP()" id="soapBtn" disabled>&#x1F4CB; Generate SOAP Note</button>
+      <button class="btn btn-outline btn-sm" onclick="extractInfo()" id="extractBtn" disabled>&#x1F50D; Extract Clinical Info</button>
+    </div>
+  </div>
+
+  <!-- SOAP Note -->
+  <div class="card">
+    <h2>&#x1F4CB; SOAP Clinical Note</h2>
+    <div class="output-box soap empty" id="soapDisplay">SOAP note will appear here after generating from the transcript...</div>
+    <div class="btn-group">
+      <button class="btn btn-success btn-sm" onclick="saveNote()" id="saveBtn" disabled>&#x1F4BE; Save Note to Records</button>
+    </div>
+    <div id="saveStatus" class="status-bar"></div>
+  </div>
+
+  <!-- Extracted Clinical Data -->
+  <div class="card">
+    <h2>&#x1F50D; Extracted Clinical Data</h2>
+    <div style="margin-bottom:12px;">
+      <label>Complaints</label>
+      <div class="tags" id="complaintsDisplay"><span style="color:#94a3b8;font-size:.85rem;">Run extraction to see results</span></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label>Medications &amp; Dosages</label>
+      <div class="tags" id="medsDisplay"></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label>Instructions</label>
+      <div class="tags" id="instructionsDisplay"></div>
+    </div>
+    <div>
+      <label>Advice &amp; Follow-up</label>
+      <div class="tags" id="adviceDisplay"></div>
+    </div>
+    <div id="extractStatus" class="status-bar"></div>
+  </div>
+
+  <!-- Translation -->
+  <div class="card">
+    <h2>&#x1F310; Translate Instructions</h2>
+    <div class="form-group">
+      <label for="translateText">Text to Translate</label>
+      <textarea id="translateText" placeholder="Paste medication instructions or notes here..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="targetLang">Target Language</label>
+      <select id="targetLang">
+        <option value="Spanish">Spanish</option>
+        <option value="Hindi">Hindi</option>
+        <option value="French">French</option>
+        <option value="Arabic">Arabic</option>
+        <option value="Portuguese">Portuguese</option>
+        <option value="Mandarin Chinese">Mandarin Chinese</option>
+        <option value="Bengali">Bengali</option>
+        <option value="Telugu">Telugu</option>
+        <option value="Tamil">Tamil</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="translateText()">&#x1F310; Translate</button>
+    <div class="output-box empty" id="translatedDisplay" style="margin-top:14px;">Translation will appear here...</div>
+    <div id="translateStatus" class="status-bar"></div>
+  </div>
+
+  <!-- Appointments -->
+  <div class="card">
+    <h2>&#x1F4C5; Patient Lookup</h2>
+    <div class="form-group">
+      <label for="lookupPatientId">Load by Patient ID</label>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="lookupPatientId" placeholder="Patient ID" style="flex:1;" />
+        <button class="btn btn-outline btn-sm" onclick="loadPatientData()">Load</button>
+      </div>
+    </div>
+    <div id="patientInfoBox" style="display:none;background:#f0f6ff;border-radius:8px;padding:12px;margin-bottom:12px;font-size:.9rem;">
+      <strong id="piName"></strong> &mdash; Age: <span id="piAge"></span>
+    </div>
+    <ul class="appt-list" id="appointmentsList">
+      <li style="color:#94a3b8;font-size:.88rem;font-style:italic;">Enter a patient ID and click Load.</li>
+    </ul>
+  </div>
+
+</main>
+
+<script>
+  const API = window.location.origin;
+  let currentTranscript = '';
+  let currentSoapNote = '';
+  let currentExtractedData = null;
+
+  // File upload
+  const audioPicker = document.getElementById('audioPicker');
+  const uploadZone  = document.getElementById('uploadZone');
+
+  audioPicker.addEventListener('change', () => {
+    if (audioPicker.files.length > 0) {
+      document.getElementById('fileName').textContent = '&#x1F3B5; ' + audioPicker.files[0].name;
+      document.getElementById('transcribeBtn').disabled = false;
+    }
+  });
+
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    const dt = e.dataTransfer;
+    if (dt.files.length > 0) {
+      const file = dt.files[0];
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      audioPicker.files = dataTransfer.files;
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('transcribeBtn').disabled = false;
+    }
+  });
+
+  async function uploadAudioFile() {
+    const btn = document.getElementById('transcribeBtn');
+    const display = document.getElementById('transcriptDisplay');
+    const status  = document.getElementById('transcribeStatus');
+    if (audioPicker.files.length === 0) { showStatus(status, 'error', 'Please select an audio file.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Processing...';
+    showStatus(status, 'info', 'Sending audio to Groq Whisper AI...');
+    const formData = new FormData();
+    formData.append('file', audioPicker.files[0]);
+    try {
+      const res  = await fetch(`${API}/api/transcribe`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.status === 'success') {
+        currentTranscript = data.transcript;
+        display.textContent = data.transcript;
+        display.classList.remove('empty');
+        document.getElementById('soapBtn').disabled    = false;
+        document.getElementById('extractBtn').disabled = false;
+        showStatus(status, 'success', 'Transcription complete.');
+      } else {
+        showStatus(status, 'error', data.detail || 'Transcription failed.');
+      }
+    } catch (err) {
+      showStatus(status, 'error', 'Network error: could not reach the backend.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#x25B6; Transcribe Audio';
+    }
+  }
+
+  async function generateSOAP() {
+    if (!currentTranscript) return;
+    const btn = document.getElementById('soapBtn');
+    const display = document.getElementById('soapDisplay');
+    const status  = document.getElementById('saveStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    try {
+      const res  = await fetch(`${API}/api/generate-note`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: currentTranscript })
+      });
+      const data = await res.json();
+      if (data.soap_note) {
+        currentSoapNote = data.soap_note;
+        display.textContent = data.soap_note;
+        display.classList.remove('empty');
+        document.getElementById('saveBtn').disabled = false;
+      } else {
+        showStatus(status, 'error', 'Could not generate SOAP note.');
+      }
+    } catch (err) {
+      showStatus(status, 'error', 'Network error generating SOAP note.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#x1F4CB; Generate SOAP Note';
+    }
+  }
+
+  async function extractInfo() {
+    if (!currentTranscript) return;
+    const btn = document.getElementById('extractBtn');
+    const status = document.getElementById('extractStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Extracting...';
+    try {
+      const res  = await fetch(`${API}/api/extract-info`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: currentTranscript })
+      });
+      const data = await res.json();
+      currentExtractedData = data;
+      renderExtracted(data);
+      showStatus(status, 'success', 'Clinical data extracted.');
+    } catch (err) {
+      showStatus(status, 'error', 'Network error extracting data.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#x1F50D; Extract Clinical Info';
+    }
+  }
+
+  function renderExtracted(data) {
+    const render = (id, items, cls) => {
+      const el = document.getElementById(id);
+      el.innerHTML = items && items.length
+        ? items.map(i => `<span class="tag ${cls}">${i}</span>`).join('')
+        : '<span style="color:#94a3b8;font-size:.85rem;">None found</span>';
+    };
+    render('complaintsDisplay', data.complaints, 'tag-complaint');
+    const meds = (data.medications || []).map((m, i) => `${m}${data.dosages && data.dosages[i] ? ' ' + data.dosages[i] : ''}`);
+    render('medsDisplay', meds, 'tag-med');
+    render('instructionsDisplay', data.instructions, 'tag-instruction');
+    const combined = [...(data.advice || []), ...(data.follow_up || []).map(f => 'Follow-up: ' + f)];
+    render('adviceDisplay', combined, 'tag-advice');
+  }
+
+  async function saveNote() {
+    const name   = document.getElementById('patientName').value.trim();
+    const age    = parseInt(document.getElementById('patientAge').value);
+    const apptDt = document.getElementById('appointmentDate').value;
+    const status = document.getElementById('saveStatus');
+    if (!name || !age) { showStatus(status, 'error', 'Fill in Patient Name and Age first.'); return; }
+    if (!currentTranscript || !currentSoapNote) { showStatus(status, 'error', 'Generate SOAP note before saving.'); return; }
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    try {
+      const res  = await fetch(`${API}/api/save-note`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_name: name, patient_age: age,
+          appointment_date: apptDt || new Date().toISOString(),
+          transcript: currentTranscript, soap_note: currentSoapNote,
+          extracted_json: currentExtractedData || {}
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showStatus(status, 'success', `Saved! Patient ID: ${data.patient_id} | Appointment ID: ${data.appointment_id}`);
+      } else {
+        showStatus(status, 'error', data.detail || 'Save failed.');
+      }
+    } catch (err) {
+      showStatus(status, 'error', 'Network error while saving.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#x1F4BE; Save Note to Records';
+    }
+  }
+
+  async function translateText() {
+    const text   = document.getElementById('translateText').value.trim();
+    const lang   = document.getElementById('targetLang').value;
+    const display = document.getElementById('translatedDisplay');
+    const status  = document.getElementById('translateStatus');
+    if (!text) { showStatus(status, 'error', 'Enter text to translate.'); return; }
+    showStatus(status, 'info', `Translating to ${lang}...`);
+    try {
+      const res  = await fetch(`${API}/api/translate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, target_language: lang })
+      });
+      const data = await res.json();
+      if (data.translated_text) {
+        display.textContent = data.translated_text;
+        display.classList.remove('empty');
+        showStatus(status, 'success', `Translated to ${lang}.`);
+      } else {
+        showStatus(status, 'error', 'Translation failed.');
+      }
+    } catch (err) {
+      showStatus(status, 'error', 'Network error during translation.');
+    }
+  }
+
+  async function loadPatientData() {
+    const pid  = document.getElementById('lookupPatientId').value.trim();
+    const list = document.getElementById('appointmentsList');
+    const infoBox = document.getElementById('patientInfoBox');
+    if (!pid) return;
+    list.innerHTML = '<li style="color:#94a3b8;font-size:.88rem;">Loading...</li>';
+    infoBox.style.display = 'none';
+    try {
+      const res  = await fetch(`${API}/api/patient/${pid}`);
+      const data = await res.json();
+      if (!res.ok) { list.innerHTML = '<li style="color:#dc2626;">Patient not found.</li>'; return; }
+      const info = data.patient_info;
+      if (info) {
+        document.getElementById('piName').textContent = info.name;
+        document.getElementById('piAge').textContent  = info.age;
+        infoBox.style.display = 'block';
+      }
+      const appts = data.upcoming_appointments || [];
+      if (appts.length === 0) {
+        list.innerHTML = '<li style="color:#94a3b8;font-size:.88rem;font-style:italic;">No appointments found.</li>';
+        return;
+      }
+      list.innerHTML = appts.map(a => `
+        <li>
+          <span>${new Date(a.appointment_date).toLocaleString()}</span>
+          <span class="appt-status ${(a.status || 'scheduled').toLowerCase()}">${a.status || 'Scheduled'}</span>
+        </li>`).join('');
+    } catch {
+      list.innerHTML = '<li style="color:#dc2626;">Network error.</li>';
+    }
+  }
+
+  function showStatus(el, type, msg) {
+    el.className = `status-bar ${type}`;
+    el.textContent = msg;
+  }
+</script>
+</body>
+</html>
